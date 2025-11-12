@@ -1,5 +1,6 @@
 // Escena, cámara y renderizador
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xbfd1e5);
 
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -13,11 +14,11 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMappingExposure = 2; // exposición ajustada para más brillo
+renderer.toneMappingExposure = 1.8;
 document.body.appendChild(renderer.domElement);
 
 // Luces
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // luz ambiental para que no se vea oscuro
+const ambientLight = new THREE.AmbientLight(0xffffff, 2); // luz ambiental intensa
 scene.add(ambientLight);
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 2);
@@ -28,45 +29,35 @@ const fillLight = new THREE.DirectionalLight(0xffffff, 1);
 fillLight.position.set(-5, 5, -5);
 scene.add(fillLight);
 
-// Cargar entorno HDR
-const pmremGenerator = new THREE.PMREMGenerator(renderer);
-new THREE.RGBELoader()
-  .setPath("https://threejs.org/examples/textures/equirectangular/")
-  .load("royal_esplanade_1k.hdr", function (texture) {
-    const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-    scene.environment = envMap;
-    scene.background = envMap;
+// Cargar modelo GLB
+const loader = new THREE.GLTFLoader();
+loader.load(
+  "pastel.glb",
+  (gltf) => {
+    document.getElementById("loading")?.remove();
+    const model = gltf.scene;
+    model.position.set(0, 0, 0);
+    model.scale.set(1.5, 1.5, 1.5);
 
-    // Cargar el modelo GLB después de tener el entorno
-    const loader = new THREE.GLTFLoader();
-    loader.load(
-      "pastel.glb",
-      (gltf) => {
-        document.getElementById("loading")?.remove();
-        const model = gltf.scene;
-        model.position.set(0, 0, 0);
-        model.scale.set(1.5, 1.5, 1.5);
-
-        // Ajustar materiales del pastel para reflejar luz correctamente
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.material.roughness = 0.4;
-            child.material.metalness = 0.2;
-            child.material.needsUpdate = true;
-          }
-        });
-
-        scene.add(model);
-      },
-      (xhr) => {
-        const percent = (xhr.loaded / xhr.total) * 100;
-        document.getElementById("loading").textContent = `Cargando pastel... ${percent.toFixed(0)}%`;
-      },
-      (error) => {
-        console.error("Error al cargar el pastel:", error);
+    // Ajustar materiales para reflejar la luz correctamente
+    model.traverse((child) => {
+      if (child.isMesh) {
+        child.material.roughness = 0.3;
+        child.material.metalness = 0.1;
+        child.material.needsUpdate = true;
       }
-    );
-  });
+    });
+
+    scene.add(model);
+  },
+  (xhr) => {
+    const percent = (xhr.loaded / xhr.total) * 100;
+    document.getElementById("loading").textContent = `Cargando pastel... ${percent.toFixed(0)}%`;
+  },
+  (error) => {
+    console.error("Error al cargar el pastel:", error);
+  }
+);
 
 // Crear ciudad alrededor
 const city = new THREE.Group();
