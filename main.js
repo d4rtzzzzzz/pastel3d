@@ -1,95 +1,82 @@
-// Escena, cámara y renderizador
+import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+import { GLTFLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
+import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+
+// Escena
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xbfd1e5);
+scene.background = new THREE.Color(0x87ceeb);
 
+// Cámara (arreglada)
 const camera = new THREE.PerspectiveCamera(
-  75,
+  60,
   window.innerWidth / window.innerHeight,
-  0.1,
-  1000
+  0.01,   // ¡súper pequeño para que no desaparezca!
+  2000    // súper grande para modelos gigantes
 );
-camera.position.set(2, 2, 4);
 
+// Render
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMappingExposure = 1.8;
 document.body.appendChild(renderer.domElement);
 
-// Luces
-const ambientLight = new THREE.AmbientLight(0xffffff, 2); // luz ambiental intensa
-scene.add(ambientLight);
+// Luz
+const ambient = new THREE.AmbientLight(0xffffff, 2);
+scene.add(ambient);
+const dir = new THREE.DirectionalLight(0xffffff, 3);
+dir.position.set(5, 10, 5);
+scene.add(dir);
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-dirLight.position.set(5, 10, 7);
-scene.add(dirLight);
+// Controles
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
 
-const fillLight = new THREE.DirectionalLight(0xffffff, 1);
-fillLight.position.set(-5, 5, -5);
-scene.add(fillLight);
-
-// Cargar modelo GLB
-const loader = new THREE.GLTFLoader();
+// Cargar modelo
+const loader = new GLTFLoader();
 loader.load(
   "pastel.glb",
   (gltf) => {
-    document.getElementById("loading")?.remove();
     const model = gltf.scene;
-    model.position.set(0, 0, 0);
-    model.scale.set(1.5, 1.5, 1.5);
 
-    // Ajustar materiales para reflejar la luz correctamente
-    model.traverse((child) => {
-      if (child.isMesh) {
-        child.material.roughness = 0.3;
-        child.material.metalness = 0.1;
-        child.material.needsUpdate = true;
+    // ⭐ LIMPIAR PANELES INTERNOS DE SKETCHFAB
+    model.traverse((obj) => {
+      if (obj.isMesh && obj.material && obj.material.name.includes("Light")) {
+        obj.visible = false;
+      }
+      if (obj.isMesh && obj.material && obj.material.transparent) {
+        obj.material.opacity = 1;
       }
     });
 
+    // ⭐ ESCALA AUTOMÁTICA
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3()).length();
+    const scaleFactor = 5 / size; // ajusta tamaño a algo normal
+    model.scale.setScalar(scaleFactor);
+
+    // ⭐ CENTRAR
+    box.setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.sub(center);
+
     scene.add(model);
-  },
-  (xhr) => {
-    const percent = (xhr.loaded / xhr.total) * 100;
-    document.getElementById("loading").textContent = `Cargando pastel... ${percent.toFixed(0)}%`;
-  },
-  (error) => {
-    console.error("Error al cargar el pastel:", error);
+
+    // Cámara ajustada al tamaño del pastel
+    camera.position.set(2, 2, 5);
+
+    document.getElementById("loading")?.remove();
+
+    animate();
   }
 );
 
-// Crear ciudad alrededor
-const city = new THREE.Group();
-for (let i = 0; i < 200; i++) {
-  const geometry = new THREE.BoxGeometry(0.3, Math.random() * 2 + 0.5, 0.3);
-  const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color().setHSL(Math.random(), 0.5, 0.5),
-    roughness: 0.5,
-    metalness: 0.4,
-  });
-  const building = new THREE.Mesh(geometry, material);
-  building.position.x = (Math.random() - 0.5) * 20;
-  building.position.z = (Math.random() - 0.5) * 20;
-  building.position.y = geometry.parameters.height / 2;
-  city.add(building);
-}
-scene.add(city);
-
-// Controles de cámara
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-
-// Animación
+// Loop de animación
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
 
-animate();
-
-// Ajuste de ventana
+// Resize
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
