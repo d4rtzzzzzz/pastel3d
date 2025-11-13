@@ -37,7 +37,7 @@ loader.load(
     document.getElementById("loading")?.remove();
     const model = gltf.scene;
     model.position.set(0, 0, 0);
-    model.scale.set(0.1, 0.1, 0.1);
+    model.scale.set(1.5, 1.5, 1.5);
 
     // Ajustar materiales para reflejar la luz correctamente
     model.traverse((child) => {
