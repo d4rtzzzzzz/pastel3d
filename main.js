@@ -6,22 +6,22 @@ import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/cont
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
-// Cámara (arreglada)
+// Cámara (super corregida)
 const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
-  0.01,   // ¡súper pequeño para que no desaparezca!
-  2000    // súper grande para modelos gigantes
+  0.0001,    // near MUY pequeño para evitar cortes
+  10000       // far muy grande para soportar modelos enormes
 );
+camera.position.set(2, 2, 5);
 
 // Render
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Luz
-const ambient = new THREE.AmbientLight(0xffffff, 2);
-scene.add(ambient);
+// Luces
+scene.add(new THREE.AmbientLight(0xffffff, 2));
 const dir = new THREE.DirectionalLight(0xffffff, 3);
 dir.position.set(5, 10, 5);
 scene.add(dir);
@@ -29,54 +29,50 @@ scene.add(dir);
 // Controles
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+controls.minDistance = 0.1;
+controls.maxDistance = 50;
 
-// Cargar modelo
+// Cargar pastel
 const loader = new GLTFLoader();
 loader.load(
   "pastel.glb",
   (gltf) => {
     const model = gltf.scene;
 
-    // ⭐ LIMPIAR PANELES INTERNOS DE SKETCHFAB
-    model.traverse((obj) => {
-      if (obj.isMesh && obj.material && obj.material.name.includes("Light")) {
-        obj.visible = false;
-      }
-      if (obj.isMesh && obj.material && obj.material.transparent) {
-        obj.material.opacity = 1;
-      }
-    });
+    // ⭐ ESCALA EXTREMA (porque tu pastel es gigante)
+    model.scale.set(0.001, 0.001, 0.001);
 
-    // ⭐ ESCALA AUTOMÁTICA
+    // ⭐ Centrar modelo
     const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3()).length();
-    const scaleFactor = 5 / size; // ajusta tamaño a algo normal
-    model.scale.setScalar(scaleFactor);
-
-    // ⭐ CENTRAR
-    box.setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     model.position.sub(center);
 
+    // ⭐ Quitar cosas internas de Sketchfab (paneles, luces falsas, rectángulos)
+    model.traverse((obj) => {
+      if (obj.isMesh) {
+        if (obj.material && obj.material.name.includes("Light")) {
+          obj.visible = false;
+        }
+        obj.material.transparent = false;
+        obj.material.depthWrite = true;
+      }
+    });
+
     scene.add(model);
 
-    // Cámara ajustada al tamaño del pastel
-    camera.position.set(2, 2, 5);
-
     document.getElementById("loading")?.remove();
-
     animate();
-  }
+  },
+  undefined,
+  (err) => console.error(err)
 );
 
-// Loop de animación
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
   renderer.render(scene, camera);
 }
 
-// Resize
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
