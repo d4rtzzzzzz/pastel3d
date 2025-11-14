@@ -1,51 +1,83 @@
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js";
-import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/loaders/GLTFLoader.js";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pastel 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #f8e0f2;
+            font-family: Arial, sans-serif;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 22px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Cargando pastel...</div>
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x222222);
+    <script type="module">
+        import * as THREE from "https://unpkg.com/three@0.152.2/build/three.module.js";
+        import { OrbitControls } from "https://unpkg.com/three@0.152.2/examples/jsm/controls/OrbitControls.js";
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0,1.5,3);
+        // Crear escena
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color("#f8e0f2");
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+        const camera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(3, 3, 5);
 
-const ambient = new THREE.AmbientLight(0xffffff, 2.5);
-scene.add(ambient);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-const dir = new THREE.DirectionalLight(0xffffff, 2);
-dir.position.set(3,5,3);
-scene.add(dir);
+        // Luz
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5);
+        scene.add(light);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambient);
 
-const loader = new GLTFLoader();
-loader.load("./pastel.glb",
- (gltf)=>{
-    document.getElementById("loading").remove();
-    const model = gltf.scene;
-    model.position.set(0,-1,0);
-    model.scale.set(1.4,1.4,1.4);
-    scene.add(model);
- },
- (xhr)=>{
-    const p = (xhr.loaded/xhr.total)*100;
-    document.getElementById("loading").innerText = "Cargando pastel... " + p.toFixed(0) + "%";
- },
- (err)=> console.error(err)
-);
+        // Crear "pastel"
+        const geometry = new THREE.CylinderGeometry(1.5, 1.5, 1, 32);
+        const material = new THREE.MeshStandardMaterial({ color: "pink" });
+        const cake = new THREE.Mesh(geometry, material);
+        scene.add(cake);
 
-function animate(){
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene,camera);
-}
-animate();
+        // Orbit Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
 
-window.addEventListener("resize", ()=>{
-    camera.aspect = window.innerWidth/window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth,window.innerHeight);
-});
+        // Ocultar texto de carga
+        document.getElementById("loading").style.display = "none";
+
+        // Animación
+        function animate() {
+            requestAnimationFrame(animate);
+            cake.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Ajuste al redimensionar ventana
+        window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
