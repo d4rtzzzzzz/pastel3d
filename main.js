@@ -1,27 +1,65 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164/build/three.module.js';
+// IMPORTAR THREE DESDE CDN
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js";
 
-const canvas = document.querySelector('#c');
-const renderer = new THREE.WebGLRenderer({canvas});
-renderer.setSize(window.innerWidth, window.innerHeight);
-
+// Escena
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffffff);
+scene.background = new THREE.Color(0xffffff); // Fondo blanco
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
-camera.position.set(2,2,4);
+// Cámara
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+camera.position.set(3, 2, 3); // Cámara fuera del pastel
 
-const light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(3,5,2);
+// Renderizador
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Controles
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 2;
+controls.maxDistance = 10;
+
+// Luces
+const light = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
 scene.add(light);
 
-const geometry = new THREE.CylinderGeometry(1,1,0.5,32);
-const material = new THREE.MeshStandardMaterial({color:0xffc0cb});
-const pastel = new THREE.Mesh(geometry, material);
-scene.add(pastel);
+const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+dirLight.position.set(3, 10, 5);
+scene.add(dirLight);
 
-function animate(){
+// Cargar modelo
+const loader = new GLTFLoader();
+loader.load(
+  "pastel.glb",
+  (gltf) => {
+    const model = gltf.scene;
+    model.scale.set(1.5, 1.5, 1.5); // Aumentar tamaño
+    model.position.set(0, -1, 0);
+    scene.add(model);
+  },
+  undefined,
+  (err) => console.error(err)
+);
+
+// Animación
+function animate() {
   requestAnimationFrame(animate);
-  pastel.rotation.y += 0.01;
-  renderer.render(scene,camera);
+  controls.update();
+  renderer.render(scene, camera);
 }
 animate();
+
+// Ajustar tamaño
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
